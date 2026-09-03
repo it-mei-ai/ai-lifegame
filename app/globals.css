@@ -12,6 +12,7 @@
   --coral: #db6147;
   --amber: #d69822;
   --leaf: #5d8c43;
+  --blue: #356ea8;
   --shadow: 0 18px 55px rgba(38, 45, 52, 0.13);
 }
 
@@ -75,6 +76,8 @@ button:disabled {
 .score-board,
 .reflection-grid article,
 .survey-box,
+.log-panel,
+.log-card,
 .event-card,
 .side-panel > div,
 .result-panel {
@@ -371,6 +374,23 @@ select {
   color: #38444b;
 }
 
+.compact-scores p {
+  margin: 0 0 14px;
+  color: #38444b;
+  line-height: 1.7;
+}
+
+.compact-scores strong {
+  display: inline-grid;
+  min-width: 72px;
+  min-height: 42px;
+  place-items: center;
+  border-radius: 8px;
+  background: #f5ead5;
+  color: #684d16;
+  font-size: 1.2rem;
+}
+
 .result-panel {
   margin-top: 20px;
   padding: 20px;
@@ -379,6 +399,10 @@ select {
   align-items: center;
   gap: 18px;
   border-left: 7px solid var(--amber);
+}
+
+.result-panel.mission {
+  border-left-color: var(--blue);
 }
 
 .result-panel.good {
@@ -507,6 +531,81 @@ select {
   background: #edf7f4;
 }
 
+.log-panel {
+  grid-column: 1 / -1;
+  padding: 24px;
+}
+
+.log-panel h2 {
+  margin: 0 0 16px;
+  font-size: 1.25rem;
+}
+
+.log-list {
+  display: grid;
+  gap: 14px;
+}
+
+.log-card {
+  padding: 18px;
+  box-shadow: none;
+  border-left: 6px solid var(--amber);
+}
+
+.log-card.safe {
+  border-left-color: var(--leaf);
+}
+
+.log-card.risky {
+  border-left-color: var(--coral);
+}
+
+.log-card p {
+  margin: 10px 0 0;
+  line-height: 1.75;
+}
+
+.log-card small,
+.log-card em {
+  display: block;
+  margin-top: 12px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.log-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.log-head span {
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #f1e3c3;
+  color: #6f4e05;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.chosen-log {
+  color: #2e3a42;
+  font-weight: 800;
+}
+
+.incident-log {
+  color: #783426;
+}
+
+.survey-box ol {
+  margin: 16px 0 0;
+  padding-left: 1.35rem;
+  display: grid;
+  gap: 8px;
+  line-height: 1.65;
+}
+
 @media (max-width: 900px) {
   .start-panel,
   .play-layout,
@@ -515,7 +614,7 @@ select {
   }
 
   .map-panel {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .map-node {
@@ -565,5 +664,9 @@ select {
   .primary-button,
   .secondary-link {
     width: 100%;
+  }
+
+  .map-panel {
+    grid-template-columns: 1fr;
   }
 }

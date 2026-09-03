@@ -3,266 +3,252 @@
 import { useMemo, useState } from "react";
 
 type Audience = "高校生" | "教員" | "新入社員" | "行政職員" | "高齢者";
-type ScoreKey = "aiLiteracy" | "infoCheck" | "security" | "consultation" | "ethics";
+type ScoreKey = "aiTrust" | "factCheck" | "privacy" | "consultation" | "responsibility";
+type ChoiceType = "safe" | "mixed" | "risky";
 
 type Choice = {
   label: string;
-  result: "good" | "watch" | "risk";
-  feedback: string;
-  action: string;
+  log: string;
+  type: ChoiceType;
   score: Partial<Record<ScoreKey, number>>;
 };
 
-type Event = {
+type Quest = {
   id: string;
+  no: string;
   title: string;
   stage: string;
-  type: string;
   scene: string;
   prompt: string;
-  clues: string[];
+  facts: string[];
   choices: Choice[];
+  incident: string;
+  analysis: string;
+  source: string;
 };
 
 const audiences: Audience[] = ["高校生", "教員", "新入社員", "行政職員", "高齢者"];
 
 const initialScore: Record<ScoreKey, number> = {
-  aiLiteracy: 4,
-  infoCheck: 4,
-  security: 4,
+  aiTrust: 4,
+  factCheck: 4,
+  privacy: 4,
   consultation: 4,
-  ethics: 4,
+  responsibility: 4,
 };
 
 const scoreLabels: Record<ScoreKey, string> = {
-  aiLiteracy: "AIリテラシー",
-  infoCheck: "情報確認力",
-  security: "セキュリティ意識",
-  consultation: "相談力",
-  ethics: "倫理・人間関係",
+  aiTrust: "AIをうのみにしない力",
+  factCheck: "たしかめる力",
+  privacy: "情報を守る力",
+  consultation: "相談する力",
+  responsibility: "人が決める力",
 };
 
-const events: Event[] = [
+const quests: Quest[] = [
+  {
+    id: "friend-sos",
+    no: "QUEST 01",
+    title: "親友から突然のSOS",
+    stage: "放課後",
+    scene:
+      "放課後、親友のユウキから電話がかかってきた。声はユウキに聞こえる。「スマホ落として、知らない人のスマホ借りてる。帰りの電車代がなくて、5,000円だけ送って。早くして！」と言っている。",
+    prompt: "あなたはどう動く？",
+    facts: ["声はユウキに聞こえる", "かなり急がされている", "いつもの連絡先ではない"],
+    choices: [
+      { label: "すぐ送る", log: "声と急ぎの言葉を信じて、すぐ送ることにした。", type: "risky", score: { aiTrust: -1, factCheck: -2, consultation: -1 } },
+      { label: "本人しか知らないことを聞く", log: "本人だけが答えられることを聞いてみた。", type: "mixed", score: { factCheck: 1 } },
+      { label: "いつものLINEに確認する", log: "電話はいったん切らず、いつものLINEにも確認を送った。", type: "safe", score: { factCheck: 2, consultation: 1 } },
+      { label: "共通の友だちに聞く", log: "共通の友だちに、ユウキの様子を聞いた。", type: "safe", score: { consultation: 2, factCheck: 1 } },
+    ],
+    incident: "翌日、ユウキ本人はスマホをなくしていなかったと分かった。声をまねた電話だった可能性が出てきた。",
+    analysis: "声が似ていること、親友が困っていること、少額に見えることを手がかりに判断していたかもしれません。AIで声を似せられる時代は、別の連絡方法で本人確認することが大切です。",
+    source: "警察庁・IPAの特殊詐欺、フィッシング、本人確認に関する注意喚起",
+  },
+  {
+    id: "school-dm",
+    no: "QUEST 02",
+    title: "学校公式アカウントからDM",
+    stage: "SNS",
+    scene:
+      "Instagramに「学校 生徒会【公式】」からDMが来た。「文化祭アンケート。回答者20名にギフトカード3,000円。本日23:59まで」と書かれている。アイコンも学校名も本物っぽい。",
+    prompt: "リンクを開く前にどうする？",
+    facts: ["学校名と公式っぽい表示がある", "今日までと書かれている", "外部ページへのリンクがある"],
+    choices: [
+      { label: "リンクを開いてログインする", log: "締切が近いので、DMのリンクからログインした。", type: "risky", score: { factCheck: -2, privacy: -2 } },
+      { label: "学校HPや連絡アプリを見る", log: "DMではなく、学校HPやいつもの連絡アプリを確認した。", type: "safe", score: { factCheck: 2, privacy: 1 } },
+      { label: "友だちにだけ先に送る", log: "自分では開かず、友だちにDMを転送した。", type: "mixed", score: { factCheck: -1, responsibility: -1 } },
+      { label: "先生に聞く", log: "スクリーンショットを先生に見せて、本物か聞いた。", type: "safe", score: { consultation: 2, factCheck: 1 } },
+    ],
+    incident: "数日後、同じDMからログインした人のアカウントが使えなくなったという話が出た。",
+    analysis: "学校名、公式という文字、景品、締切を信じる材料にしていたかもしれません。本物っぽい表示でも、IDやパスワードを入れる前に公式の連絡元へ戻る必要があります。",
+    source: "IPA・警察庁のフィッシング対策、実在サービスをかたる偽サイトの注意喚起",
+  },
+  {
+    id: "teacher-video",
+    no: "QUEST 03",
+    title: "先生の動画が流出",
+    stage: "グループチャット",
+    scene:
+      "夜9時、クラスのグループチャットに担任の先生が生徒を悪く言っているような動画が投稿された。顔も声も先生に見える。友だちは「広めよう」と盛り上がっている。",
+    prompt: "あなたは次にどうする？",
+    facts: ["顔と声は先生に見える", "だれが作った動画か分からない", "すでにチャットが盛り上がっている"],
+    choices: [
+      { label: "別のグループへ送る", log: "本物か分からないまま、別のグループへ送った。", type: "risky", score: { factCheck: -2, responsibility: -2 } },
+      { label: "保存だけして様子を見る", log: "投稿はせず、動画を保存して様子を見た。", type: "mixed", score: { responsibility: -1 } },
+      { label: "出した人に出どころを聞く", log: "動画を出した人に、どこから来たものか聞いた。", type: "mixed", score: { factCheck: 1 } },
+      { label: "先生や学校に相談する", log: "動画を広めず、先生や学校に相談した。", type: "safe", score: { consultation: 2, responsibility: 2 } },
+    ],
+    incident: "翌朝、その動画はAIで作られたものかもしれないと分かった。すでに別のクラスにも広がっていた。",
+    analysis: "自分で投稿していなくても、転送、保存、放置で広がる側に回ることがあります。真偽不明の人物動画は、面白さより先に本人の被害と相談先を考える必要があります。",
+    source: "総務省・文部科学省の情報モラル教材、肖像・名誉・情報拡散リスク",
+  },
   {
     id: "ai-report",
-    title: "AI課題提出",
-    stage: "学校生活",
-    type: "AI判断",
+    no: "QUEST 04",
+    title: "AIで課題、10分で終わった",
+    stage: "レポート",
     scene:
-      "レポート課題の締切が近い。AIに相談すると、完成度が高そうな文章と出典リストが一瞬で出てきました。ただし、出典の一部は見覚えがなく、内容も自分の言葉では説明できません。",
-    prompt: "あなたなら、次にどうしますか？",
-    clues: ["出典が実在するか不明", "自分で説明できない表現がある", "学校のAI利用ルールを確認していない"],
+      "明日提出のレポートがまだ白紙。AIにたのむと、本文も参考文献も一気に出てきた。AIに「本当にある？」と聞くと「あります」と答えた。",
+    prompt: "提出前にどうする？",
+    facts: ["AIは自信ありそうに答えている", "参考文献を自分では見ていない", "本文を自分の言葉で説明できない"],
     choices: [
-      {
-        label: "出典を確認し、自分の言葉で書き直す",
-        result: "good",
-        feedback:
-          "AIを道具として使い、最終責任を自分に戻せています。便利さと誠実さの両立ができています。",
-        action: "公式資料や授業資料で確認し、理解した内容だけを自分の言葉で提出する。",
-        score: { aiLiteracy: 2, infoCheck: 2, ethics: 1 },
-      },
-      {
-        label: "先生にAI利用範囲を確認する",
-        result: "good",
-        feedback:
-          "判断に迷う場面で確認できています。ルール確認は、AI時代の基本的な相談行動です。",
-        action: "利用した範囲、困っている点、提出前に確認したい点を短く伝える。",
-        score: { aiLiteracy: 1, consultation: 2, ethics: 1 },
-      },
-      {
-        label: "AI生成文をそのまま提出する",
-        result: "risk",
-        feedback:
-          "短期的には楽ですが、存在しない出典や理解不足が残ります。AIは責任まで肩代わりしてくれません。",
-        action: "提出前に出典と内容理解を確認する。わからない部分は質問し直す。",
-        score: { aiLiteracy: -2, infoCheck: -2, ethics: -2 },
-      },
-      {
-        label: "友人にも同じ方法を勧める",
-        result: "watch",
-        feedback:
-          "便利な方法を共有する前に、正しい使い方か確認が必要です。誤った方法は周囲にも広がります。",
-        action: "AI利用の注意点や学校ルールもセットで共有する。",
-        score: { aiLiteracy: -1, ethics: -1, consultation: 1 },
-      },
+      { label: "そのまま提出する", log: "AIが作った本文と参考文献をそのまま提出した。", type: "risky", score: { aiTrust: -2, factCheck: -2, responsibility: -1 } },
+      { label: "参考文献が本当にあるか調べる", log: "参考文献が本当にあるか、図書館や公式ページで調べた。", type: "safe", score: { factCheck: 2, responsibility: 1 } },
+      { label: "構成だけ参考にして書き直す", log: "AIの構成だけを参考にして、自分の言葉で書き直した。", type: "safe", score: { aiTrust: 1, responsibility: 2 } },
+      { label: "友だちにも同じ方法をすすめる", log: "便利だったので、友だちにも同じ方法をすすめた。", type: "mixed", score: { aiTrust: -1, responsibility: -1 } },
     ],
+    incident: "提出後、先生から「この参考文献は見つかりません」と言われた。",
+    analysis: "AIを使って早く進めることと、正しく判断することは同じではありません。AIの答えを使うときは、出どころを自分でたしかめ、分かる言葉で説明できる形にする必要があります。",
+    source: "文部科学省 生成AIガイドライン、学習活動でのAI利用に関する考え方",
   },
   {
-    id: "sns-dm",
-    title: "SNSなりすましDM",
-    stage: "SNS",
-    type: "本人確認",
+    id: "career",
+    no: "QUEST 05",
+    title: "AIに進路を決めてもらった",
+    stage: "進路",
     scene:
-      "同じ学校の先輩を名乗るアカウントからDMが届きました。『限定イベントの申込、今日まで。ここから登録して』と外部ページへのアクセスを促されています。",
-    prompt: "リンクを開く前に、どう動きますか？",
-    clues: ["アカウント作成日が新しい", "共通の知人が確認できない", "今日までと急がせている"],
+      "進路希望を書く時期。何が向いているか分からず、AIに聞くと「この仕事は向いていません。別の道がおすすめです」と強く言われた。",
+    prompt: "進路希望を書く前にどうする？",
+    facts: ["AIははっきり答えている", "先生や家族にはまだ相談していない", "自分の経験とは少し違う"],
     choices: [
-      {
-        label: "プロフィールと過去投稿を確認する",
-        result: "watch",
-        feedback:
-          "確認の第一歩はできています。ただし、見た目だけで本人と断定するのは危険です。",
-        action: "共通の知人や別の連絡手段でも確認する。",
-        score: { infoCheck: 1, security: 1 },
-      },
-      {
-        label: "共通の知人や先生に確認する",
-        result: "good",
-        feedback:
-          "一人で判断せず、リアルな関係性を使って確認できています。最も被害を避けやすい行動です。",
-        action: "DMのスクリーンショットを見せ、本人かどうか確認する。",
-        score: { consultation: 2, infoCheck: 2, security: 1 },
-      },
-      {
-        label: "そのままリンクを開いて登録する",
-        result: "risk",
-        feedback:
-          "急がせる言葉と外部リンクが重なる場面は危険です。個人情報入力前に止まる必要があります。",
-        action: "リンク先ではなく、公式な案内や本人確認を先に行う。",
-        score: { security: -2, infoCheck: -2 },
-      },
-      {
-        label: "不安なので放置し、誰にも言わない",
-        result: "watch",
-        feedback:
-          "開かない判断は良い一方、周囲にも同じDMが届いている可能性があります。",
-        action: "先生、家族、友人に共有し、被害拡大を防ぐ。",
-        score: { security: 1, consultation: -1 },
-      },
+      { label: "AIの通りに進路希望を書く", log: "AIの答えをそのまま進路希望に書いた。", type: "risky", score: { aiTrust: -2, consultation: -1, responsibility: -1 } },
+      { label: "選択肢を増やすヒントにする", log: "AIの答えは、考える候補を増やすヒントとして使った。", type: "safe", score: { aiTrust: 1, responsibility: 2 } },
+      { label: "先生や家族にも相談する", log: "AIだけで決めず、先生や家族にも相談した。", type: "safe", score: { consultation: 2, responsibility: 1 } },
+      { label: "向いていないと言われた道を消す", log: "AIに向いていないと言われた道を、候補から外した。", type: "mixed", score: { aiTrust: -1, responsibility: -1 } },
     ],
+    incident: "後から、AIの答えだけで自分の可能性をせばめていたかもしれないと感じた。",
+    analysis: "AIは考える材料を出せますが、人生の決定者にはなれません。自分の経験、周りの人の話、調べた情報を合わせて考えることが大切です。",
+    source: "文部科学省 生成AIガイドライン、キャリア教育での自己理解と意思決定",
   },
   {
-    id: "friend-post",
-    title: "友人関係とSNS投稿",
-    stage: "人間関係",
-    type: "倫理",
+    id: "api-key",
+    no: "QUEST 06",
+    title: "このコード、AIに直してもらおう",
+    stage: "プログラミング",
     scene:
-      "友人との会話をAIで面白く加工してSNSに投稿しました。反応は増えましたが、本人が嫌がっていることがわかり、周囲も拡散し始めています。",
-    prompt: "このあと、どう対応しますか？",
-    clues: ["本人の許可を取っていない", "AI加工で文脈が変わっている", "反応より相手の尊厳が優先"],
+      "授業で作ったアプリが動かない。先生はAIを使ってもよいと言った。コードの中には学校名、APIキー、内部URLが入っている。",
+    prompt: "AIへ貼り付ける前にどうする？",
+    facts: ["早く直したい", "コードの中に秘密の文字列がある", "全部貼ればAIは直しやすそう"],
     choices: [
-      {
-        label: "投稿を削除し、本人に直接謝る",
-        result: "good",
-        feedback:
-          "早く止め、相手に向き合う判断ができています。失敗後のリカバリーは信頼を守る重要な行動です。",
-        action: "拡散した相手にも削除を依頼し、必要なら先生や大人に相談する。",
-        score: { ethics: 2, consultation: 1 },
-      },
-      {
-        label: "先生や信頼できる大人に相談する",
-        result: "good",
-        feedback:
-          "自分だけで抱え込まず、被害を広げないための支援を求められています。",
-        action: "投稿内容、拡散状況、本人の反応を整理して相談する。",
-        score: { consultation: 2, ethics: 1 },
-      },
-      {
-        label: "冗談だから、と放置する",
-        result: "risk",
-        feedback:
-          "自分に悪気がなくても、相手が傷ついていれば対応が必要です。AIやSNSの便利さより信頼関係が優先です。",
-        action: "相手の気持ちを確認し、削除・謝罪・訂正を行う。",
-        score: { ethics: -2, consultation: -1 },
-      },
-      {
-        label: "AIで言い訳文を作って投稿する",
-        result: "risk",
-        feedback:
-          "言い訳を整えても、本人と向き合わなければ信頼は戻りません。AIは誠実な対話の代わりにはなりません。",
-        action: "まず本人に謝り、必要な範囲で訂正を出す。",
-        score: { aiLiteracy: -1, ethics: -2 },
-      },
+      { label: "コードを全部そのまま貼る", log: "コードを全部そのままAIに貼り付けた。", type: "risky", score: { privacy: -2, responsibility: -1 } },
+      { label: "APIキーやURLを消してから貼る", log: "APIキーや内部URLを消し、必要な部分だけAIに見せた。", type: "safe", score: { privacy: 2, aiTrust: 1 } },
+      { label: "エラー文だけ見せて相談する", log: "コード全部ではなく、エラー文と困っている点をAIに伝えた。", type: "safe", score: { privacy: 2, responsibility: 1 } },
+      { label: "友だちのコードも一緒に貼る", log: "似ているので、友だちのコードも一緒にAIへ貼った。", type: "risky", score: { privacy: -2, responsibility: -2 } },
     ],
+    incident: "バグは直ったが、秘密のキーをAIに送っていたことが後で問題になった。",
+    analysis: "AIに見せる情報は少なくするのが基本です。名前、内部URL、キー、友だちの情報などは消してから相談する必要があります。",
+    source: "個人情報保護委員会、IPA・AISIの生成AI利用と情報管理に関する注意喚起",
   },
   {
-    id: "phishing-mail",
-    title: "怪しいURL",
-    stage: "アカウント管理",
-    type: "セキュリティ",
+    id: "poster",
+    no: "QUEST 07",
+    title: "AIで文化祭ポスター完成",
+    stage: "文化祭",
     scene:
-      "『アカウント更新が必要です』というメールが届きました。本文は自然ですが、送信元とURLに少し違和感があります。24時間以内に手続きしないと停止と書かれています。",
-    prompt: "ログインする前に何をしますか？",
-    clues: ["送信元が公式と少し違う", "期限で焦らせている", "メール内リンクからログインを求めている"],
+      "文化祭ポスターを今日中に作ることになった。AI画像を使うと、有名キャラ風のかっこいいデザインがすぐに出てきた。友だちの写真を元にした案もある。",
+    prompt: "公開する前にどうする？",
+    facts: ["人気が出そうな絵ができた", "有名キャラに似ている", "友だちの写真を使っている"],
     choices: [
-      {
-        label: "メール内リンクではなく公式ページから確認する",
-        result: "good",
-        feedback:
-          "リンクを直接開かず、公式導線に戻れています。フィッシング対策として有効です。",
-        action: "ブックマークや検索から公式ページへ行き、通知の有無を確認する。",
-        score: { security: 2, infoCheck: 2 },
-      },
-      {
-        label: "担当者やサポート窓口に確認する",
-        result: "good",
-        feedback:
-          "迷った時に確認先を使えています。組織や学校では特に重要な行動です。",
-        action: "メール本文ではなく、既知の連絡先から問い合わせる。",
-        score: { consultation: 2, security: 1 },
-      },
-      {
-        label: "急いでメール内リンクからログインする",
-        result: "risk",
-        feedback:
-          "焦りを利用するのは典型的なトラップです。IDやパスワード入力前に止まる必要があります。",
-        action: "送信元、URL、公式通知を確認してから進む。",
-        score: { security: -2, infoCheck: -2 },
-      },
-      {
-        label: "周囲にも急いで転送する",
-        result: "watch",
-        feedback:
-          "注意喚起のつもりでも、未確認情報を広げると混乱を招きます。",
-        action: "確認できた事実と相談先をセットで共有する。",
-        score: { infoCheck: -1, consultation: 1 },
-      },
+      { label: "そのまま学校外にも出す", log: "よくできたので、そのまま学校外にも公開した。", type: "risky", score: { responsibility: -2, consultation: -1 } },
+      { label: "似すぎていない別案にする", log: "有名キャラに似すぎない別案に作り直した。", type: "safe", score: { responsibility: 2, aiTrust: 1 } },
+      { label: "写真の本人に許可を取る", log: "写真を使う前に、写っている本人に確認した。", type: "safe", score: { privacy: 1, consultation: 1, responsibility: 1 } },
+      { label: "AI作成と書けばそのままでよい", log: "AI作成と書けば大丈夫だと思い、そのまま使った。", type: "mixed", score: { aiTrust: -1, responsibility: -1 } },
     ],
+    incident: "ポスターは好評だったが、後から「このキャラに似ていない？」「本人の許可は？」と指摘された。",
+    analysis: "AIで作っても、公開する人の判断は残ります。だれかの作品に似すぎていないか、人物の写真を勝手に使っていないかを確認しましょう。",
+    source: "文化庁のAIと著作権に関する資料、文部科学省の学校利用ガイドライン",
   },
   {
-    id: "work-report",
-    title: "報連相ミス",
-    stage: "仕事・地域活動",
-    type: "信頼",
+    id: "news-summary",
+    no: "QUEST 08",
+    title: "AIニュース要約を共有",
+    stage: "ニュース",
     scene:
-      "小さなミスをしました。AIに相談すると、問題がなかったように見える説明文が出てきました。ただし、関係者には早く共有した方がよさそうです。",
-    prompt: "信頼を守るために、何を選びますか？",
-    clues: ["自己保身に寄った文章", "関係者への影響が未確認", "早期共有で被害を小さくできる"],
+      "SNSで見たニュースをAIに要約してもらった。短く分かりやすくなったので、クラスLINEに共有したくなった。",
+    prompt: "共有する前にどうする？",
+    facts: ["要約は読みやすい", "元記事を最後まで読んでいない", "AIが少し強い言い方にしている"],
     choices: [
-      {
-        label: "事実・影響・対応案を整理して報告する",
-        result: "good",
-        feedback:
-          "AIを整理に使いながら、人間として責任ある報告に戻せています。",
-        action: "何が起きたか、影響、次の対応、再発防止を短く伝える。",
-        score: { ethics: 2, consultation: 2, aiLiteracy: 1 },
-      },
-      {
-        label: "AIの謝罪文をたたき台にし、自分で直す",
-        result: "watch",
-        feedback:
-          "AIを補助として使うのは有効です。ただし、事実確認と自分の言葉への修正が必須です。",
-        action: "事実に合わない表現や責任逃れに見える表現を削る。",
-        score: { aiLiteracy: 1, ethics: 1 },
-      },
-      {
-        label: "問題が大きくなるまで黙っている",
-        result: "risk",
-        feedback:
-          "ミスを隠すほど、信頼回復は難しくなります。AI時代でも信頼は人間の行動で決まります。",
-        action: "小さいうちに相談し、影響を最小化する。",
-        score: { ethics: -2, consultation: -2 },
-      },
-      {
-        label: "AIの文章をそのまま関係者へ送る",
-        result: "watch",
-        feedback:
-          "文章は整っていても、事実と責任が曖昧なままでは危険です。",
-        action: "自分で事実確認し、必要な相手に必要な順番で共有する。",
-        score: { aiLiteracy: -1, ethics: -1, infoCheck: -1 },
-      },
+      { label: "元記事を読んでから共有する", log: "元記事を読み、AIの要約と違うところがないか見た。", type: "safe", score: { factCheck: 2, responsibility: 1 } },
+      { label: "要約だけ見てすぐ送る", log: "AIの要約だけを見て、すぐクラスLINEへ送った。", type: "risky", score: { factCheck: -2, responsibility: -1 } },
+      { label: "分からない部分は送らない", log: "自分で分からない部分は、共有文から外した。", type: "safe", score: { aiTrust: 1, factCheck: 1 } },
+      { label: "もっと強い言い方に直す", log: "読まれやすいように、もっと強い言い方に直した。", type: "risky", score: { responsibility: -2, factCheck: -1 } },
     ],
+    incident: "共有後、要約の一部が元記事と違うと分かり、クラス内で誤解が広がった。",
+    analysis: "要約は便利ですが、元の情報と同じとは限りません。自分が広めるなら、元記事を見て、言いすぎていないか確認する必要があります。",
+    source: "総務省・文部科学省の情報モラル教材、生成AIガイドライン",
   },
+  {
+    id: "chatbot",
+    no: "QUEST 09",
+    title: "AIチャットボットに全部任せた",
+    stage: "問い合わせ",
+    scene:
+      "学校行事の問い合わせにAIチャットボットを使うことになった。回答は速いが、たまにルールと違う案内をしている。",
+    prompt: "運用するとき、どうする？",
+    facts: ["回答が速くなる", "たまに違う案内がある", "利用者は公式回答だと思う"],
+    choices: [
+      { label: "AIの回答をそのまま公式にする", log: "AIの回答をそのまま公式案内として使った。", type: "risky", score: { aiTrust: -2, responsibility: -2 } },
+      { label: "重要な回答は人が確認する", log: "重要な案内は、人が確認してから出す形にした。", type: "safe", score: { responsibility: 2, aiTrust: 1 } },
+      { label: "困ったら人につなぐルールにする", log: "AIで答えきれない時は、人につなぐルールを作った。", type: "safe", score: { consultation: 2, responsibility: 1 } },
+      { label: "間違いが出るまで様子を見る", log: "問題が起きるまでは、そのまま使うことにした。", type: "mixed", score: { responsibility: -1 } },
+    ],
+    incident: "AIの案内を信じた人が違う手続きをしてしまい、あとから個別対応が必要になった。",
+    analysis: "AIの回答を公式に見せるなら、人が責任を持つ仕組みが必要です。重要な内容は確認し、困った時に人へつなぐ道を用意しましょう。",
+    source: "AIチャットボット誤案内の実例、消費者保護・組織責任の観点",
+  },
+  {
+    id: "selection",
+    no: "QUEST 10",
+    title: "AIで採用・選抜を効率化",
+    stage: "選抜",
+    scene:
+      "参加希望者が多く、AIに点数をつけてもらって上位だけを選ぶことになった。数字で出るので公平に見える。",
+    prompt: "選ぶ前にどうする？",
+    facts: ["数字で順位が出ている", "AIが何を重く見たか分かりにくい", "低い点の人にも強みがありそう"],
+    choices: [
+      { label: "AIの上位だけ選ぶ", log: "AIの点数だけを見て、上位の人だけを選んだ。", type: "risky", score: { aiTrust: -2, responsibility: -2 } },
+      { label: "点数の理由を確認する", log: "AIがなぜその点にしたのか、理由を確認した。", type: "mixed", score: { factCheck: 1, responsibility: 1 } },
+      { label: "人の目でも見直す", log: "AIの点数だけで決めず、人の目でも見直した。", type: "safe", score: { responsibility: 2, aiTrust: 1 } },
+      { label: "いろいろな強みも見る", log: "点数以外の強みや事情も見て、話し合った。", type: "safe", score: { responsibility: 2, consultation: 1 } },
+    ],
+    incident: "あとから、AI点数が低かった人に大事な強みがあったと分かった。",
+    analysis: "数字で出ると公平に見えますが、AIの判断にも偏りが入ることがあります。人を選ぶ場面では、理由を見て、人が総合的に考える必要があります。",
+    source: "経産省・IPA/AISIガイドラインの公平性、人間中心、説明可能性の観点",
+  },
+];
+
+const surveyQuestions = [
+  "ゲームとして楽しめましたか？",
+  "シナリオは自分にも起こりそうだと感じましたか？",
+  "途中でAIや情報リテラシーの教材だと気づきましたか？",
+  "結果や種明かしを見たとき、意外性はありましたか？",
+  "AIやSNSの情報を、そのまま信じず確認しようと思いましたか？",
+  "AIに入力する情報を、送信前に確認しようと思いましたか？",
+  "AIに確認したことと、事実を確認したことは違うと理解できましたか？",
+  "今後、AIやSNSを使うときに変えたい行動はありますか？",
+  "画面の見やすさ・操作のしやすさはどうでしたか？",
+  "追加してほしいシナリオやテーマはありますか？",
 ];
 
 function clampScore(value: number) {
@@ -273,10 +259,16 @@ function scorePercent(value: number) {
   return `${clampScore(value) * 10}%`;
 }
 
-function scoreStatus(value: number) {
-  if (value >= 8) return "強み";
-  if (value >= 5) return "成長中";
-  return "要注意";
+function resultLabel(type: ChoiceType) {
+  if (type === "safe") return "確認できた行動";
+  if (type === "mixed") return "少し気になる行動";
+  return "危なかった行動";
+}
+
+function resultTone(type: ChoiceType) {
+  if (type === "safe") return "safe";
+  if (type === "mixed") return "mixed";
+  return "risky";
 }
 
 export function LifeGame() {
@@ -285,32 +277,27 @@ export function LifeGame() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedChoices, setSelectedChoices] = useState<Record<string, Choice>>({});
   const [scores, setScores] = useState(initialScore);
-  const [showResult, setShowResult] = useState(false);
+  const [missionComplete, setMissionComplete] = useState(false);
 
-  const currentEvent = events[currentIndex];
-  const selectedChoice = selectedChoices[currentEvent.id];
+  const currentQuest = quests[currentIndex];
+  const selectedChoice = selectedChoices[currentQuest.id];
   const completedCount = Object.keys(selectedChoices).length;
-  const isFinished = completedCount === events.length;
+  const isFinished = completedCount === quests.length;
 
   const totalScore = useMemo(
     () => Object.values(scores).reduce((sum, score) => sum + clampScore(score), 0),
     [scores],
   );
 
-  const strongest = useMemo(() => {
-    const entries = Object.entries(scores) as [ScoreKey, number][];
-    return entries.sort((a, b) => b[1] - a[1])[0];
-  }, [scores]);
-
-  const weakest = useMemo(() => {
-    const entries = Object.entries(scores) as [ScoreKey, number][];
-    return entries.sort((a, b) => a[1] - b[1])[0];
-  }, [scores]);
+  const riskyCount = useMemo(
+    () => Object.values(selectedChoices).filter((choice) => choice.type === "risky").length,
+    [selectedChoices],
+  );
 
   function choose(choice: Choice) {
     if (selectedChoice) return;
 
-    setSelectedChoices((previous) => ({ ...previous, [currentEvent.id]: choice }));
+    setSelectedChoices((previous) => ({ ...previous, [currentQuest.id]: choice }));
     setScores((previous) => {
       const next = { ...previous };
       for (const key of Object.keys(choice.score) as ScoreKey[]) {
@@ -318,16 +305,16 @@ export function LifeGame() {
       }
       return next;
     });
-    setShowResult(true);
+    setMissionComplete(true);
   }
 
   function moveNext() {
-    if (currentIndex < events.length - 1) {
+    if (currentIndex < quests.length - 1) {
       setCurrentIndex((index) => index + 1);
-      setShowResult(false);
+      setMissionComplete(false);
       return;
     }
-    setShowResult(false);
+    setMissionComplete(false);
   }
 
   function resetGame() {
@@ -335,7 +322,7 @@ export function LifeGame() {
     setCurrentIndex(0);
     setSelectedChoices({});
     setScores(initialScore);
-    setShowResult(false);
+    setMissionComplete(false);
   }
 
   if (!started) {
@@ -343,14 +330,15 @@ export function LifeGame() {
       <main className="app-shell">
         <section className="start-panel" aria-labelledby="app-title">
           <div className="start-copy">
-            <p className="eyebrow">教育用シミュレーション / MVP</p>
-            <h1 id="app-title">AI時代の失敗体験型ライフゲーム</h1>
-            <p className="lead">そのAI、本当に信じて大丈夫？</p>
+            <p className="eyebrow">AI Life Game / 実証プロトタイプ</p>
+            <h1 id="app-title">AI時代を進むライフゲーム</h1>
+            <p className="lead">教えられる前に、まず選ぶ。</p>
             <p className="intro">
-              AI、SNS、怪しいURL、人間関係のトラップを安全に体験し、現実で使える確認力・相談力・倫理観を学ぶプロトタイプです。
+              AI、SNS、学校生活、仕事の中で起きそうな出来事を選びながら進みます。
+              途中では正解も危険も表示しません。最後に、あなたの行動ログから何が起きたかをふり返ります。
             </p>
             <div className="safety-note">
-              実在企業名、実URL、個人情報入力は使いません。失敗しても、次の判断につなげるためのゲームです。
+              実在URL、パスワード、個人情報の入力は使いません。失敗しても、現実で試す前に気づくためのゲームです。
             </div>
           </div>
 
@@ -368,39 +356,39 @@ export function LifeGame() {
               ))}
             </select>
             <button type="button" className="primary-button" onClick={() => setStarted(true)}>
-              ライフゲームを始める
+              ゲームを始める
             </button>
-            <p className="micro-copy">所要時間: 5〜10分 / イベント: {events.length}件</p>
+            <p className="micro-copy">所要時間: 10〜20分 / クエスト: {quests.length}件</p>
           </div>
         </section>
       </main>
     );
   }
 
-  if (isFinished && currentIndex === events.length - 1 && !showResult) {
+  if (isFinished && currentIndex === quests.length - 1 && !missionComplete) {
     return (
       <main className="app-shell">
         <section className="summary-layout" aria-labelledby="summary-title">
           <div className="summary-card">
-            <p className="eyebrow">診断結果 / {audience}</p>
-            <h1 id="summary-title">AI時代の判断力スコア</h1>
+            <p className="eyebrow">行動ログ分析 / {audience}</p>
+            <h1 id="summary-title">あとから見えた判断</h1>
             <div className="total-score">
               <span>{totalScore}</span>
               <small>/ 50</small>
             </div>
             <p className="summary-text">
-              {totalScore >= 40
-                ? "かなり堅実です。AIやネットの便利さを使いながら、確認と相談を行動に移せています。"
-                : totalScore >= 28
-                  ? "基礎はできています。焦りや人間関係が絡む場面で、もう一呼吸置くと判断が安定します。"
-                  : "伸びしろがあります。危ない場面を知識として覚えるより、確認・相談・保留を習慣にすることが重要です。"}
+              {riskyCount === 0
+                ? "すべての場面で、確認・相談・保留を行動にできていました。現実でも同じ一呼吸を使えます。"
+                : riskyCount <= 3
+                  ? "多くの場面で立ち止まれています。急がされる場面や本物っぽい表示が出た時に、もう一度確認を入れるとさらに安定します。"
+                  : "AIやSNSは、一度うまくいったように見えてから問題が出ることがあります。急ぎ、景品、本人っぽさ、数字の見た目に引っぱられた場面を見直しましょう。"}
             </p>
             <div className="summary-actions">
               <button type="button" className="primary-button" onClick={resetGame}>
-                もう一度体験する
+                もう一度ちがう行動を試す
               </button>
               <a className="secondary-link" href="#survey">
-                アンケート欄へ
+                実証アンケートを見る
               </a>
             </div>
           </div>
@@ -410,7 +398,7 @@ export function LifeGame() {
               <div className="score-row" key={key}>
                 <div className="score-row-head">
                   <span>{scoreLabels[key]}</span>
-                  <strong>{scoreStatus(scores[key])}</strong>
+                  <strong>{clampScore(scores[key])}</strong>
                 </div>
                 <div className="meter" aria-hidden="true">
                   <div style={{ width: scorePercent(scores[key]) }} />
@@ -419,24 +407,40 @@ export function LifeGame() {
             ))}
           </div>
 
-          <div className="reflection-grid">
-            <article>
-              <h2>強み</h2>
-              <p>{scoreLabels[strongest[0]]}が最も高く出ています。判断の前に立ち止まる力を、ほかの場面にも広げられます。</p>
-            </article>
-            <article>
-              <h2>注意ポイント</h2>
-              <p>{scoreLabels[weakest[0]]}は追加練習の余地があります。迷ったら、一人で抱えず確認先を使う設計にしましょう。</p>
-            </article>
-            <article>
-              <h2>明日から使える行動</h2>
-              <p>急がされる、外部リンクへ誘導される、AIの答えがもっともらしい。この3つが出たら、確認・相談・保留を先に選びます。</p>
-            </article>
-          </div>
+          <section className="log-panel" aria-label="行動ログと種明かし">
+            <h2>あなたの行動ログと種明かし</h2>
+            <div className="log-list">
+              {quests.map((quest, index) => {
+                const choice = selectedChoices[quest.id];
+                return (
+                  <article className={`log-card ${resultTone(choice.type)}`} key={quest.id}>
+                    <div className="log-head">
+                      <span>{quest.no}</span>
+                      <strong>{quest.title}</strong>
+                    </div>
+                    <p className="chosen-log">選んだ行動: {choice.log}</p>
+                    <p className="incident-log">その後: {quest.incident}</p>
+                    <p>{quest.analysis}</p>
+                    <small>
+                      {resultLabel(choice.type)} / 根拠: {quest.source}
+                    </small>
+                    {index === 0 ? <em>プレイ中には見えなかった情報です。</em> : null}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
 
-          <section id="survey" className="survey-box" aria-label="アンケート">
-            <h2>アンケートリンク設置欄</h2>
-            <p>教師テスト配布時に、ここへGoogleフォーム等のURLを設定します。</p>
+          <section id="survey" className="survey-box" aria-label="実証アンケート">
+            <h2>実証アンケート項目案</h2>
+            <p>
+              初回実証では、回答の負担をおさえるために10問程度に絞ります。Googleフォームなどへ移す想定です。
+            </p>
+            <ol>
+              {surveyQuestions.map((question) => (
+                <li key={question}>{question}</li>
+              ))}
+            </ol>
           </section>
         </section>
       </main>
@@ -447,8 +451,10 @@ export function LifeGame() {
     <main className="game-shell">
       <header className="game-header">
         <div>
-          <p className="eyebrow">AI Life Game / {audience}</p>
-          <h1>そのAI、本当に信じて大丈夫？</h1>
+          <p className="eyebrow">
+            {currentQuest.no} / {audience}
+          </p>
+          <h1>AI時代を進むライフゲーム</h1>
         </div>
         <button type="button" className="ghost-button" onClick={resetGame}>
           最初から
@@ -456,25 +462,25 @@ export function LifeGame() {
       </header>
 
       <section className="map-panel" aria-label="ライフゲームマップ">
-        {events.map((event, index) => {
-          const completed = Boolean(selectedChoices[event.id]);
+        {quests.map((quest, index) => {
+          const completed = Boolean(selectedChoices[quest.id]);
           const active = index === currentIndex;
           return (
             <button
               type="button"
-              key={event.id}
+              key={quest.id}
               className={`map-node ${active ? "active" : ""} ${completed ? "completed" : ""}`}
               onClick={() => {
                 if (completed || index <= completedCount) {
                   setCurrentIndex(index);
-                  setShowResult(Boolean(selectedChoices[event.id]));
+                  setMissionComplete(Boolean(selectedChoices[quest.id]));
                 }
               }}
               aria-current={active ? "step" : undefined}
             >
               <span>{index + 1}</span>
-              <strong>{event.title}</strong>
-              <small>{event.stage}</small>
+              <strong>{quest.title}</strong>
+              <small>{quest.stage}</small>
             </button>
           );
         })}
@@ -483,16 +489,16 @@ export function LifeGame() {
       <section className="play-layout">
         <article className="event-card" aria-labelledby="event-title">
           <div className="event-meta">
-            <span>{currentEvent.stage}</span>
-            <span>{currentEvent.type}</span>
+            <span>{currentQuest.stage}</span>
+            <span>今わかっていることだけで判断</span>
           </div>
-          <h2 id="event-title">{currentEvent.title}</h2>
+          <h2 id="event-title">{currentQuest.title}</h2>
           <div className="scenario-box">
-            <p>{currentEvent.scene}</p>
+            <p>{currentQuest.scene}</p>
           </div>
-          <h3>{currentEvent.prompt}</h3>
+          <h3>{currentQuest.prompt}</h3>
           <div className="choices">
-            {currentEvent.choices.map((choice) => (
+            {currentQuest.choices.map((choice) => (
               <button
                 type="button"
                 key={choice.label}
@@ -506,43 +512,35 @@ export function LifeGame() {
           </div>
         </article>
 
-        <aside className="side-panel" aria-label="ヒントとスコア">
+        <aside className="side-panel" aria-label="今わかっていること">
           <div className="clue-card">
-            <h2>見るべきサイン</h2>
+            <h2>今わかっていること</h2>
             <ul>
-              {currentEvent.clues.map((clue) => (
-                <li key={clue}>{clue}</li>
+              {currentQuest.facts.map((fact) => (
+                <li key={fact}>{fact}</li>
               ))}
             </ul>
           </div>
 
           <div className="compact-scores">
-            <h2>現在の診断</h2>
-            {(Object.keys(scores) as ScoreKey[]).map((key) => (
-              <div className="mini-score" key={key}>
-                <span>{scoreLabels[key]}</span>
-                <strong>{clampScore(scores[key])}</strong>
-              </div>
-            ))}
+            <h2>行動ログ</h2>
+            <p>ここでは良い・悪いをまだ出しません。最後にまとめてふり返ります。</p>
+            <strong>
+              {completedCount}/{quests.length}
+            </strong>
           </div>
         </aside>
       </section>
 
-      {showResult && selectedChoice ? (
-        <section className={`result-panel ${selectedChoice.result}`} aria-live="polite">
+      {missionComplete && selectedChoice ? (
+        <section className="result-panel mission" aria-live="polite">
           <div>
-            <p className="result-label">
-              {selectedChoice.result === "good"
-                ? "よい判断"
-                : selectedChoice.result === "watch"
-                  ? "惜しい判断"
-                  : "トラップ発動"}
-            </p>
-            <h2>{selectedChoice.feedback}</h2>
-            <p>{selectedChoice.action}</p>
+            <p className="result-label">ミッション完了</p>
+            <h2>あなたの行動を記録しました。</h2>
+            <p>この時点では成功したように見えます。あとで何が起きるか、最後にまとめて確認します。</p>
           </div>
           <button type="button" className="primary-button" onClick={moveNext}>
-            {currentIndex === events.length - 1 ? "診断を見る" : "次のマスへ"}
+            {currentIndex === quests.length - 1 ? "最後の結果を見る" : "次のクエストへ"}
           </button>
         </section>
       ) : null}

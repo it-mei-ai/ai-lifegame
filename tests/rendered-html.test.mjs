@@ -50,27 +50,28 @@ test("server-renders the AI life game landing state", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>AI時代の失敗体験型ライフゲーム<\/title>/i);
-  assert.match(html, /AI時代の失敗体験型ライフゲーム/);
-  assert.match(html, /そのAI、本当に信じて大丈夫/);
-  assert.match(html, /教育用シミュレーション/);
+  assert.match(html, /<title>AI時代を進むライフゲーム<\/title>/i);
+  assert.match(html, /AI時代を進むライフゲーム/);
+  assert.match(html, /教えられる前に、まず選ぶ/);
+  assert.match(html, /実証プロトタイプ/);
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|react-loading-skeleton/i);
 });
 
 test("keeps safety and scenario content in source", async () => {
   const source = await readFile(new URL("../app/LifeGame.tsx", import.meta.url), "utf8");
-  assert.match(source, /AI課題提出/);
-  assert.match(source, /SNSなりすましDM/);
-  assert.match(source, /友人関係とSNS投稿/);
-  assert.match(source, /怪しいURL/);
-  assert.match(source, /報連相ミス/);
-  assert.match(source, /実在企業名、実URL、個人情報入力は使いません/);
+  assert.match(source, /親友から突然のSOS/);
+  assert.match(source, /学校公式アカウントからDM/);
+  assert.match(source, /AIで課題、10分で終わった/);
+  assert.match(source, /このコード、AIに直してもらおう/);
+  assert.match(source, /AIで文化祭ポスター完成/);
+  assert.match(source, /実証アンケート項目案/);
+  assert.match(source, /実在URL、パスワード、個人情報の入力は使いません/);
   assert.doesNotMatch(source, /password|credit card|カード番号/i);
 });
 
 test("also serves the planned public path", async () => {
-  const response = await renderPath("/ai-lifegame");
+  const response = await renderPath("/ai-lifegame12");
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /AI時代の失敗体験型ライフゲーム/);
+  assert.match(html, /AI時代を進むライフゲーム/);
 });

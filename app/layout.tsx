@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI時代の失敗体験型ライフゲーム",
+  title: "AI時代を進むライフゲーム",
   description:
-    "AI、SNS、情報セキュリティ、人間関係のトラップを安全に疑似体験する教育用Webアプリです。",
+    "AI、SNS、学校生活、仕事の判断を選び、最後に行動ログでふり返る教育用Webアプリです。",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
