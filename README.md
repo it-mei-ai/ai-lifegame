@@ -1,6 +1,18 @@
 # AI時代の失敗体験型ライフゲーム
 
-公開予定URL: `https://g.it-mei.com/ai-lifegame`
+公開URL: [https://g.it-mei.com/ai-lifegame](https://g.it-mei.com/ai-lifegame)
+
+最新版（キャラクター冒険版）: [https://g.it-mei.com/ai-lifegame13](https://g.it-mei.com/ai-lifegame13)
+
+## 最新リリース: Version 13
+
+- 世界、ステージ名、問題を事前に選ぶ操作を廃止
+- 5キャラクターから相棒を選ぶだけで冒険開始
+- キャラクターごとに背景、世界名、5つのステージ名を自動変更
+- 各キャラクター専用の固定問題を5問ずつ、合計25問収録
+- PC・スマートフォン対応
+
+Version 13のブラウザ単体版ソースは `standalone/ai-lifegame13/` にあります。`index.html`を開くだけで実行できます。
 
 AI、SNS、怪しいURL、人間関係のトラップを安全に体験し、現実で使える確認力・相談力・倫理観を学ぶWebアプリMVPです。
 
